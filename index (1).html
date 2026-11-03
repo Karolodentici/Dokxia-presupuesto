@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Presupuesto DokxIA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: panel de configuración a la izquierda, presupuesto fijo a la derecha; una columna en móvil.
+   Look único de marca DokxIA (oscuro cálido + naranja), sin tema claro a propósito. */
+:root {
+  color-scheme: dark;
+  --bg: #100D0B;
+  --panel: #191512;
+  --card: #221D19;
+  --line: #3A322C;
+  --fg: #F3EEE8;
+  --soft: #D9D1C8;
+  --muted: #B3A89E;
+  --accent: #F28A1C;
+  --accent-ink: #1A120B;
+  --accent-wash: #2A211A;
+  --ok: #8FCB8B;
+  --font: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.fld span { font-size: 13px; color: var(--soft); font-weight: 500; }
+.fld input { font: inherit; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; width: 100%; }
+.fld input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.fld.err input { border-color: var(--bad, #F08A78); }
+@media (max-width: 560px) { .fgrid { grid-template-columns: 1fr; } }
+.totrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.redbtn { font: inherit; font-size: 14px; font-weight: 700; color: var(--accent-ink); background: rgba(26,18,11,.12); border: 2px solid var(--accent-ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.redbtn[aria-pressed="true"] { background: var(--accent-ink); color: var(--accent); }
+.redbtn[aria-pressed="true"]::before { content: "✓ "; }
+.oldp { text-decoration: line-through; opacity: .6; font-size: .55em; margin-left: 10px; }
+.send { background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.send-k { margin: 0; font-weight: 700; font-size: 17px; }
+.send-b { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.btn.sendbtn { background: var(--accent); color: var(--accent-ink); font-size: 16px; padding: 14px 12px; }
+.btn.sendbtn:hover { background: #F59A3A; }
+@media (max-width: 420px) { .send-b { grid-template-columns: 1fr; } }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.tile { width: 48px; height: 48px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 20px; }
+.x { color: var(--accent); }
+.brand-name { font-size: 24px; font-weight: 700; line-height: 1.1; }
+.brand-sub { color: var(--muted); font-size: 13px; }
+h1 { font-size: clamp(24px, 3vw, 34px); font-weight: 600; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.config { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+fieldset { margin: 0; border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+legend { padding: 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.config { gap: 26px; }
+.config fieldset { padding: 22px 20px 22px; border-color: #4A3F37; }
+.config legend { font-family: var(--mono); font-size: 17px; font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); background: var(--accent); padding: 5px 14px; border-radius: 8px; margin-left: -4px; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seg button { font: inherit; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 8px; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.seg button small { color: var(--muted); font-size: 12px; }
+.seg button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-wash); box-shadow: inset 0 0 0 1px var(--accent); }
+.seg button strong { font-weight: 600; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.row .lbl { display: flex; flex-direction: column; min-width: 0; flex: 1 1 180px; }
+.row .lbl span { font-weight: 500; }
+.row .lbl small { color: var(--muted); font-size: 12.5px; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
+.stepper button { font: inherit; font-size: 18px; width: 38px; height: 36px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+.stepper button:hover { background: var(--accent-wash); }
+.stepper input { width: 52px; height: 36px; border: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); background: transparent; color: var(--fg); font-family: var(--mono); font-size: 15px; text-align: center; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: inherit; font-size: 14px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.chip .p { color: var(--muted); font-size: 12.5px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-wash); }
+.chip[aria-pressed="true"]::before { content: "✓"; color: var(--accent); font-weight: 700; }
+.chip:disabled { cursor: default; opacity: 1; border-style: dashed; }
+.chip:disabled .p { color: var(--ok); }
+.mods { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mrow { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px 12px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line); }
+.mrow:first-child { border-top: 0; }
+.mrow.msub { border-top-style: dashed; }
+.mrow.msub .mt { padding-left: 14px; border-left: 2px solid var(--line); }
+.mrow.msub .mt strong { font-weight: 500; }
+.mn { width: 26px; height: 26px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); color: var(--accent); font-family: var(--mono); font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
+.mn:empty { visibility: hidden; }
+.mt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mt strong { font-weight: 600; }
+.mt small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.minc { color: var(--ok); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mrow .chip { white-space: nowrap; }
+.mrow .chip .p { color: var(--fg); font-size: 13px; }
+.mrow .chip .act { font-weight: 600; color: var(--accent); }
+.mrow .chip { min-width: 112px; justify-content: center; }
+.mrow .chip:disabled { min-width: 0; }
+.mrow .chip:not(:disabled)[aria-pressed="true"] { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--card)); }
+.mrow .chip:not(:disabled)[aria-pressed="true"]::before { color: var(--ok); }
+.mrow .chip:not(:disabled)[aria-pressed="true"] .act { color: var(--ok); }
+.svcs .mrow .chip[aria-pressed="true"] { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--card)); }
+.svcs .mrow .chip[aria-pressed="true"] .act { color: var(--ok); }
+.mrow .chip:not(:disabled)[aria-pressed="true"] .p { color: var(--ok); }
+.mrow .chip:disabled { border: 0; background: none; padding: 0; box-shadow: none; }
+.mrow .chip:disabled::before { content: none; }
+.mrow .chip:disabled .act { color: var(--ok); font-weight: 600; font-size: 13px; }
+.mhead { list-style: none; color: var(--accent); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 14px 0 4px; }
+.svcs .mrow { grid-template-columns: 0 minmax(0, 1fr) auto; column-gap: 0; }
+.svcs .mrow .mt { padding-right: 12px; }
+.svcs .mhead + .mrow { border-top: 0; }
+.stepper[hidden], .chip[hidden] { display: none; }
+.svcs .mrow.on .stepper { border-color: var(--ok); }
+.svcs .mrow.on .mt strong::after { content: "  ✓ Añadido"; color: var(--ok); font-size: 12.5px; font-weight: 600; }
+.onb-list { margin: 0; padding-left: 20px; color: var(--soft); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.msoon { color: var(--muted); font-size: 13px; font-weight: 600; font-style: italic; white-space: nowrap; }
+@media (max-width: 560px) { .mrow { grid-template-columns: 26px minmax(0, 1fr); } .mrow .ms { grid-column: 2; } }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { color: var(--muted); font-size: 12.5px; margin: 0; }
+.warn { color: var(--accent); font-size: 13px; margin: 0; }
+.quote { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 900px) { .quote { position: static; } }
+.totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tot { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tot.main { grid-column: span 2; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tot .k { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tot.main .k { color: #3B2510; }
+.tot .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 500; }
+.tot.main .v { font-size: 34px; font-weight: 500; }
+.tot .s { font-size: 12.5px; color: var(--muted); }
+.tot.main .s { color: #3B2510; }
+.tablebox { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+th, td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--card); }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .d { display: block; color: var(--muted); font-size: 12.5px; }
+tr.grp td { background: var(--accent-wash); color: var(--accent); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding-top: 7px; padding-bottom: 7px; }
+tr.inc td.n { color: var(--ok); font-family: var(--font); }
+tr.sum td { font-weight: 600; background: var(--card); }
+tr:last-child td { border-bottom: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.btn { font: inherit; font-weight: 600; color: var(--accent); background: transparent; border: 1px solid var(--accent); border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+.btn:hover { background: var(--accent-wash); }
+.ghost { color: var(--muted); border-color: var(--line); }
+.toggle { display: inline-flex; gap: 8px; align-items: center; color: var(--soft); cursor: pointer; font-size: 14px; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+#copied { color: var(--ok); font-size: 13px; }
+textarea.fallback { width: 100%; min-height: 160px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; font-family: var(--mono); font-size: 12.5px; padding: 10px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* Pestañas y plan de negocio */
+:root { --deep: #15110E; --bad: #F08A78; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs a { color: var(--muted); text-decoration: none; padding: 10px 16px; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a:hover { color: var(--fg); }
+.tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plan { display: flex; flex-direction: column; gap: 20px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.kpis .tot .v.bad { color: var(--bad); }
+.plan-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.plan-bar h2 { font-size: 20px; font-weight: 600; margin: 0; }
+.pl { min-width: 900px; font-size: 14px; }
+.pl th, .pl td { white-space: nowrap; }
+.pl td.c, .pl th.c { white-space: normal; min-width: 250px; position: sticky; left: 0; background: var(--panel); z-index: 1; }
+.pl th.c { background: var(--card); }
+.pl tr.sec td { background: var(--accent-wash); color: var(--accent); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding-top: 7px; padding-bottom: 7px; }
+.pl tr.sec td.c { background: var(--accent-wash); }
+.pl tr.ppl td { color: var(--muted); font-size: 13px; }
+.pl tr.pl-tot td { font-weight: 600; background: var(--card); }
+.pl tr.pl-tot td.c { background: var(--card); }
+.pl tr.pl-grp td { background: var(--panel); color: var(--fg); font-weight: 500; }
+.pl tr.pl-grp td.c { background: var(--panel); }
+.pl tr.res td { font-weight: 600; color: var(--accent); background: var(--accent-wash); }
+.pl tr.res td.c { background: var(--accent-wash); }
+.pl tr.res td.bad { color: var(--bad); }
+.pl thead th { text-transform: none; letter-spacing: 0; }
+.pl tr.gh th.g { text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; padding: 10px 14px; border-bottom: 0; }
+.pl tr.gh th.g-red { background: var(--accent-ink); color: var(--soft); border-top: 3px solid var(--muted); }
+.pl tr.gh th.g-y1 { background: var(--accent); color: var(--accent-ink); border-top: 3px solid var(--accent); }
+.pl tr.gh th.g-y2 { background: var(--accent-wash); color: var(--accent); border-top: 3px solid var(--accent); }
+.pl tr.ch th.n { vertical-align: bottom; padding-top: 12px; padding-bottom: 12px; border-bottom: 2px solid var(--line); }
+.pl tr.ch th .ct { display: block; font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--fg); letter-spacing: 0; }
+.pl tr.ch th.c { vertical-align: bottom; }
+.pl tr.ch th.n { min-width: 112px; }
+.pl tr.ch th .cs { display: block; font-family: var(--font); font-size: 11.5px; font-weight: 500; color: var(--muted); margin-top: 3px; white-space: normal; max-width: 140px; margin-left: auto; }
+.pl tr.ch th.k-red { background: var(--accent-ink); border-bottom-color: var(--muted); }
+.pl tr.ch th.k-y1 { background: var(--accent-wash); border-bottom-color: var(--accent); }
+.pl tr.ch th.k-y1 .ct { color: var(--accent); }
+.pl tr.ch th.k-y2 { border-bottom-color: var(--accent); }
+.pl tr > :nth-child(3), .pl tr > :nth-child(4) { border-left: 2px solid var(--line); }
+.pl tr.gh > :nth-child(3), .pl tr.gh > :nth-child(4) { border-left: 2px solid var(--bg); }
+.pl tr.sub td, .pl tr.subp td, .pl tr.exp td { background: var(--deep); }
+.pl tr.sub td.c, .pl tr.subp td.c { background: var(--deep); padding-left: 42px; }
+.pl tr.sub td { color: var(--soft); font-size: 13.5px; }
+.pl tr.subh td { background: var(--deep); color: var(--accent); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding-top: 12px; }
+.pl tr.subh td.c { background: var(--deep); padding-left: 42px; }
+.pl tr.subp td { color: var(--muted); font-size: 12.5px; }
+.pl tr.sub td .d, .pl tr.subp td .d { display: block; color: var(--muted); font-size: 12px; white-space: normal; }
+.pl tr.exp td { white-space: normal; color: var(--soft); font-size: 13.5px; line-height: 1.5; padding: 12px 16px 12px 42px; border-left: 3px solid var(--accent); }
+.pl tr.exp td p { margin: 0; max-width: 95ch; }
+.xbtn { font: inherit; color: var(--fg); background: none; border: 0; padding: 2px 0; cursor: pointer; display: inline-flex; gap: 10px; align-items: center; text-align: left; font-weight: 500; }
+.xbtn .chev { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); display: inline-grid; place-items: center; color: var(--accent); font-size: 10px; transition: transform .15s; }
+.xbtn:hover .chev { border-color: var(--accent); }
+.xbtn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.hyp { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.hyp fieldset { gap: 10px; }
+.hyp .f { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.hyp .f label { color: var(--soft); font-size: 13.5px; min-width: 0; }
+.hyp .f label small { display: block; color: var(--muted); font-size: 12px; }
+.hyp .f input { flex: none; width: 104px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font-family: var(--mono); font-size: 14px; text-align: right; padding: 0 10px; }
+details.hypbox > summary { cursor: pointer; font-weight: 600; color: var(--fg); padding: 6px 0; }
+details.hypbox > summary::marker { color: var(--accent); }
+.cellbtn { font: inherit; color: inherit; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 6px; cursor: pointer; border-bottom: 1px dotted transparent; }
+.cellbtn:hover { background: var(--accent-wash); border-bottom-color: var(--accent); }
+.cellbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+dialog.calc { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(680px, calc(100% - 32px)); max-height: calc(100% - 48px); box-shadow: 0 24px 60px rgba(0,0,0,.55); }
+dialog.calc::backdrop { background: rgba(10, 8, 6, .72); }
+.calc-in { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+.calc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.calc-top h3 { margin: 0; font-size: 20px; font-weight: 600; }
+.calc-top p { margin: 4px 0 0; color: var(--accent); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.calc-x { font: inherit; font-size: 20px; line-height: 1; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; flex: none; }
+.calc-x:hover { color: var(--fg); border-color: var(--accent); }
+.calc table { min-width: 0; font-size: 14px; }
+.calc td { white-space: normal; }
+.calc td .d { display: block; color: var(--muted); font-size: 12.5px; font-family: var(--mono); margin-top: 2px; }
+.calc tr.sum td { font-weight: 600; background: var(--card); }
+.calc tr.sum td.n { color: var(--accent); }
+tr.sum2 td { font-weight: 500; color: var(--soft); background: var(--panel); }
+tr.y1only td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+tr.y1only td { background: var(--accent-wash); }
+.calc .why { color: var(--soft); font-size: 13.5px; line-height: 1.5; margin: 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--deep); border-radius: 0 8px 8px 0; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="tile" aria-hidden="true">D<span class="x">x</span></div>
+      <div>
+        <div class="brand-name">Dok<span class="x">x</span>IA</div>
+        <div class="brand-sub">Auditoría de cuentas</div>
+      </div>
+    </div>
+    <div>
+      <h1 id="page-h1">Tu presupuesto DokxIA</h1>
+      <p class="lede" id="page-lede">Rellena los datos de tu despacho, elige plan, usuarios y módulos, y pulsa «Enviar» al final. Precios sin IVA.</p>
+    </div>
+  </header>
+
+
+
+  <div id="view-calc">
+
+  <div class="layout">
+    <section class="config" aria-label="Configuración del pedido">
+      <fieldset>
+        <legend>Tu despacho</legend>
+        <div class="fgrid">
+          <label class="fld"><span>Despacho *</span><input id="f-desp" type="text" autocomplete="organization" placeholder="Nombre del despacho"></label>
+          <label class="fld"><span>Persona de contacto</span><input id="f-cont" type="text" autocomplete="name" placeholder="Nombre y apellidos"></label>
+          <label class="fld"><span>Teléfono</span><input id="f-tel" type="tel" autocomplete="tel" placeholder="600 000 000"></label>
+          <label class="fld"><span>Correo</span><input id="f-mail" type="email" autocomplete="email" placeholder="nombre@despacho.es"></label>
+          <label class="fld"><span>Encargos de auditoría al año</span><input id="f-enc" type="number" min="0" inputmode="numeric" placeholder="Opcional"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Plan</legend>
+        <div class="seg" role="group" aria-label="Plan">
+          <button type="button" id="plan-esencial" data-plan="esencial"><strong>Esencial</strong><small>115 €/mes · 2 usuarios incluidos</small></button>
+          <button type="button" id="plan-profesional" data-plan="profesional"><strong>Profesional</strong><small>170 €/mes · 2 usuarios incluidos</small></button>
+          <button type="button" id="plan-firma" data-plan="firma"><strong>Firma</strong><small>Más de 15 · alta y precio a negociar</small></button>
+        </div>
+        <div class="seg" role="group" aria-label="Forma de pago">
+          <button type="button" id="bill-contado" data-bill="contado"><strong>Al contado</strong><small>Precio de tarifa</small></button>
+          <button type="button" id="bill-plazos" data-bill="plazos"><strong>3 plazos</strong><small>+2 % sobre la cuota</small></button>
+          <button type="button" id="bill-mensual" data-bill="mensual"><strong>Mensualizado</strong><small>+5 % sobre la cuota</small></button>
+        </div>
+        <p class="warn" id="firma-warn" hidden>El plan Firma es para más de 15 usuarios. Precio de referencia, a negociar.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Usuarios</legend>
+        <div class="row">
+          <div class="lbl"><span>Usuarios</span><small id="users-help">2 incluidos en la cuota</small></div>
+          <div class="stepper"><button type="button" data-step="users" data-d="-1" aria-label="Quitar usuario">−</button><input id="users" type="number" min="1" max="200" value="5" aria-label="Usuarios"><button type="button" data-step="users" data-d="1" aria-label="Añadir usuario">+</button></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Revisores / EQCR</span><small id="rev-help">5 €/mes cada uno · solo leen, revisan y firman</small></div>
+          <div class="stepper"><button type="button" data-step="reviewers" data-d="-1" aria-label="Quitar revisor">−</button><input id="reviewers" type="number" min="0" max="50" value="1" aria-label="Revisores"><button type="button" data-step="reviewers" data-d="1" aria-label="Añadir revisor">+</button></div>
+        </div>
+        <p class="note">Acceso del cliente auditado: gratuito e ilimitado.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Módulos</legend>
+        <p class="note">En el orden de la demo. Lo «Incluido» va en todos los planes; el resto se añade.</p>
+        <ol class="mods" id="modules"><li class="mrow"><span class="mn">1</span><div class="mt"><strong>Expediente NIA-ES</strong><small>Planificación, ejecución y cierre; control de tiempos y estado de cada papel</small></div><div class="ms"><span class="minc">Incluido</span></div></li><li class="mrow"><span class="mn">2</span><div class="mt"><strong>Contabilidad</strong><small>Carga de diarios, validación, diario sellado y análisis financiero</small></div><div class="ms"><span class="minc">Incluido</span></div></li><li class="mrow"><span class="mn">3</span><div class="mt"><strong>Portal del cliente</strong><small>Documentos solicitados y carpetas; acceso del cliente gratuito e ilimitado</small></div><div class="ms"><span class="minc">Incluido</span></div></li><li class="mrow"><span class="mn">4</span><div class="mt"><strong>Planificación y riesgos</strong><small>Aceptación, conocimiento de la entidad, control interno, materialidad y matriz de riesgos</small></div><div class="ms"><span class="minc">Incluido</span></div></li><li class="mrow"><span class="mn">5</span><div class="mt"><strong>Papeles de trabajo y ajustes</strong><small>Asignar, revisar, evidencia, fuente de datos, ajustes y sumario de diferencias</small></div><div class="ms"><span class="minc">Incluido</span></div></li><li class="mrow"><span class="mn">6</span><div class="mt"><strong>Circularización NIA-ES 505</strong><small>Envío, seguimiento y respuestas por el portal</small></div><div class="ms"><button type="button" class="chip" id="mod-circ" data-mod="circ"><span class="act">Añadir</span></button></div></li><li class="mrow"><span class="mn">7</span><div class="mt"><strong>DocExtrae</strong><small>Extrae datos de facturas, modelos y contratos; cotejos; coloca cada documento en su ciclo, papel y prueba</small></div><div class="ms"><button type="button" class="chip" id="mod-docx" data-mod="docx"><span class="act">Añadir</span></button></div></li><li class="mrow"><span class="mn">8</span><div class="mt"><strong>IA local</strong><small>Asistente sobre el expediente con modelo propio en la UE, sin enviar datos a terceros</small></div><div class="ms"><button type="button" class="chip" id="mod-ia" data-mod="ia"><span class="act">Añadir</span></button></div></li><li class="mrow"><span class="mn">9</span><div class="mt"><strong>Cuentas anuales y memoria</strong><small>Estados financieros y memoria (PGC y PGC PYMES), cuadrados con el expediente</small></div><div class="ms"><button type="button" class="chip" id="mod-cuentas" data-mod="cuentas"><span class="act">Añadir</span></button></div></li><li class="mrow"><span class="mn">10</span><div class="mt"><strong>Consolidación</strong><small>Cuentas consolidadas de grupos</small></div><div class="ms"><span class="msoon">Próximamente</span></div></li><li class="mrow"><span class="mn">11</span><div class="mt"><strong>Informe y archivo</strong><small>Memorándum, carta de manifestaciones, informe y archivo sellado</small></div><div class="ms"><span class="minc">Incluido</span></div></li></ol>
+        <p class="note" style="margin-top:6px"><strong style="color:var(--fg)">Servicios</strong> · se añaden según lo que necesite cada despacho</p>
+        <ol class="mods svcs"><li class="mhead">Puesta en marcha</li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Diarios complejos</strong><small>SAP, Navision, A3 en varias pestañas · 90 € por diario</small></div><div class="ms"><button type="button" class="chip svc-add" data-add="diarios"><span class="act">Añadir</span></button><div class="stepper" data-for="diarios"><button type="button" data-step="diarios" data-d="-1" aria-label="Quitar">−</button><input id="diarios" type="number" min="0" max="200" value="0" aria-label="Diarios complejos"><button type="button" data-step="diarios" data-d="1" aria-label="Añadir uno más">+</button></div></div></li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Migración de expedientes</strong><small>Desde otro programa · 450 € hasta 5 encargos; después, 70 € cada uno</small></div><div class="ms"><button type="button" class="chip svc-add" data-add="migra"><span class="act">Añadir</span></button><div class="stepper" data-for="migra"><button type="button" data-step="migra" data-d="-1" aria-label="Quitar">−</button><input id="migra" type="number" min="0" max="500" value="0" aria-label="Encargos a migrar"><button type="button" data-step="migra" data-d="1" aria-label="Añadir uno más">+</button></div></div></li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Implantación presencial</strong><small>Jornada de 8 h en el despacho · 600 €, más desplazamiento</small></div><div class="ms"><button type="button" class="chip svc-add" data-add="implant"><span class="act">Añadir</span></button><div class="stepper" data-for="implant"><button type="button" data-step="implant" data-d="-1" aria-label="Quitar">−</button><input id="implant" type="number" min="0" max="30" value="0" aria-label="Jornadas de implantación"><button type="button" data-step="implant" data-d="1" aria-label="Añadir uno más">+</button></div></div></li><li class="mhead">Formación</li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Formación in company online</strong><small>Para el equipo del despacho · 500 €</small></div><div class="ms"><button type="button" class="chip" id="tog-sesiones" data-tog="sesiones"><span class="act">Añadir</span></button></div></li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Formación online técnica y homologada</strong><small>Convocatorias abiertas a todos los clientes · 180 € por diploma</small></div><div class="ms"><button type="button" class="chip svc-add" data-add="incompany"><span class="act">Añadir</span></button><div class="stepper" data-for="incompany"><button type="button" data-step="incompany" data-d="-1" aria-label="Quitar">−</button><input id="incompany" type="number" min="0" max="200" value="0" aria-label="Diplomas"><button type="button" data-step="incompany" data-d="1" aria-label="Añadir uno más">+</button></div></div></li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Cursos grabados</strong><small>47,50 € por curso para clientes</small></div><div class="ms"><button type="button" class="chip svc-add" data-add="cursos"><span class="act">Añadir</span></button><div class="stepper" data-for="cursos"><button type="button" data-step="cursos" data-d="-1" aria-label="Quitar">−</button><input id="cursos" type="number" min="0" max="50" value="0" aria-label="Cursos grabados"><button type="button" data-step="cursos" data-d="1" aria-label="Añadir uno más">+</button></div></div></li><li class="mrow msvc"><span class="mn"></span><div class="mt"><strong>Formación colectiva</strong><small>Convocada para todos los clientes</small></div><div class="ms"><span class="minc">Gratuita</span></div></li></ol>
+      </fieldset>
+
+      
+    </section>
+
+    <section class="quote" aria-label="Presupuesto">
+      <div class="totals">
+        <div class="tot main"><div class="totrow"><span class="k">Total primer año</span><button type="button" class="redbtn" id="red" aria-pressed="false">Precio Red</button></div><span class="v" id="t-first">—</span><span class="s" id="t-first-s">—</span></div>
+        <div class="tot"><span class="k" id="t-month-k">Cuota mensual</span><span class="v" id="t-month">—</span><span class="s" id="t-month-s">—</span></div>
+        <div class="tot"><span class="k">Pagos únicos</span><span class="v" id="t-once">—</span><span class="s">Servicios y formación</span></div>
+        <div class="tot"><span class="k">Recurrente anual</span><span class="v" id="t-year">—</span><span class="s">A partir del segundo año</span></div>
+        <div class="tot"><span class="k">Por usuario y mes</span><span class="v" id="t-user">—</span><span class="s">Cuota recurrente ÷ usuarios</span></div>
+      </div>
+      <div class="tablebox" hidden>
+        <table aria-label="Desglose del presupuesto">
+          <thead><tr><th>Concepto</th><th class="n">€/mes</th><th class="n">Primer año</th></tr></thead>
+          <tbody id="lines"></tbody>
+        </table>
+      </div>
+      <p class="note" id="clever-ref" hidden></p>
+      <div class="actions">
+        <label class="toggle"><input type="checkbox" id="iva"> Mostrar con IVA (21 %)</label>
+        <button type="button" class="btn ghost" id="reset">Empezar de nuevo</button>
+      </div>
+      <div class="send">
+        <p class="send-k">Envíanos tu configuración</p>
+        <div class="send-b">
+          <button type="button" class="btn sendbtn" id="send-wa">Enviar por WhatsApp</button>
+          <button type="button" class="btn sendbtn" id="send-mail">Enviar por correo</button>
+        </div>
+        <p class="note" id="send-msg">Se abrirá WhatsApp con el mensaje ya escrito: solo tienes que pulsar enviar.</p>
+      </div>
+    </section>
+  </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var PLANS = {
+    esencial:    { name: 'Esencial',    base: 115, onb: 30, inc: 2, add: 20, add6: 15, add10: 10, incl: {}, onbIncl: false, sesIncl: 0, revIncl: false },
+    profesional: { name: 'Profesional', base: 170, onb: 40, inc: 2, add: 30, add6: 25, add10: 15, incl: { circ: 1, docx: 1, cuentas: 1 }, onbIncl: true, sesIncl: 0, revIncl: false },
+    firma:       { name: 'Firma',       perUser: 30, incl: { circ: 1, docx: 1, ia: 1, cuentas: 1, prio: 1 }, onbIncl: true, sesIncl: 1, revIncl: true }
+  };
+  var MODS = {
+    circ:    { name: 'Circularización NIA-ES 505', unit: 'despacho', price: 40 },
+    docx:    { name: 'DocExtrae', unit: 'usuario', price: 25 },
+    ia:      { name: 'IA local', unit: 'usuario', price: 15 },
+    cuentas: { name: 'Cuentas anuales y memoria', unit: 'despacho', price: 30 }
+  };
+  var DEFAULT = { plan: 'profesional', bill: 'contado', users: 4, reviewers: 1, storage: 0, mods: {}, onb: true,
+    diarios: 0, migra: 0, implant: 0, bonos: 0, sesiones: 0, cursos: 0, incompany: 0, iva: false };
+  var S = JSON.parse(JSON.stringify(DEFAULT));
+  var NUMS = ['users','reviewers','diarios','migra','implant','cursos','incompany'];
+
+  function eur(v) {
+    var r = Math.round(v * 100) / 100;
+    var s = r.toLocaleString('de-DE', { minimumFractionDigits: r % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    return s + ' €';
+  }
+  function $(id) { return document.getElementById(id); }
+
+  function compute() {
+    var p = PLANS[S.plan], u = Math.max(1, S.users), L = [], mOnce = [], mRec = 0;
+    var mens = S.bill === 'mensual', SUR = mens ? 0.05 : (S.bill === 'plazos' ? 0.02 : 0);
+    function rec(label, detail, monthly, unit, per) { L.push({ g: 'rec', label: label, detail: detail, m: monthly, unit: unit, per: per }); }
+    function inc(label, detail) { L.push({ g: 'rec', label: label, detail: detail, inc: true }); }
+    function once(label, detail, amount) { mOnce.push({ g: 'once', label: label, detail: detail, a: amount }); }
+
+    // Cuota y usuarios
+    if (S.plan === 'firma') {
+      rec('Licencia Firma', u + ' usuarios × 30 €/mes (referencia)', u * 30, 30, 'usuario');
+    } else {
+      rec('Cuota de aplicación ' + p.name, 'Incluye ' + Math.min(u, p.inc) + ' de ' + p.inc + ' usuarios', p.base);
+      var a = Math.max(0, Math.min(u, 5) - p.inc), a6 = Math.max(0, Math.min(u, 9) - 5), b = Math.max(0, u - 9);
+      function uw(n) { return n + ' usuario' + (n > 1 ? 's' : ''); }
+      if (a) rec('Usuarios 3.º a 5.º', uw(a) + ' × ' + p.add + ' €/mes', a * p.add, p.add, 'usuario');
+      if (a6) rec('Usuarios 6.º a 9.º', uw(a6) + ' × ' + p.add6 + ' €/mes · más barato que el tramo anterior', a6 * p.add6, p.add6, 'usuario');
+      if (b) rec('Usuarios desde el 10.º', uw(b) + ' × ' + p.add10 + ' €/mes · el precio más bajo', b * p.add10, p.add10, 'usuario');
+    }
+    if (S.reviewers) {
+      if (p.revIncl) inc('Revisores / EQCR', S.reviewers + ' incluidos en Firma');
+      else rec('Revisores / EQCR', S.reviewers + ' × 5 €/mes', S.reviewers * 5, 5, 'revisor');
+    }
+    // Software incluido y módulos, en el orden de la demo
+    inc('Software DokxIA', 'Expediente NIA-ES, contabilidad, portal del cliente, planificación y riesgos, papeles de trabajo y ajustes, informe y archivo, control de tiempos');
+    Object.keys(MODS).forEach(function (k) {
+      var m = MODS[k];
+      if (p.incl[k]) { inc(m.name, 'Incluido en ' + p.name); return; }
+      if (!S.mods[k]) return;
+      if (m.unit === 'usuario') rec(m.name, u + ' usuarios × ' + m.price + ' €/mes', u * m.price, m.price, 'usuario');
+      else rec(m.name, 'Por despacho', m.price);
+    });
+    if (S.storage) rec('Almacenamiento extra', S.storage + ' × 100 GB a 10 €/mes', S.storage * 10);
+
+    var subtotal = L.reduce(function (s, l) { return s + (l.y1only ? 0 : (l.m || 0)); }, 0);
+    if (p.incl.prio) inc('Soporte prioritario', 'Incluido en Firma');
+    else if (S.mods.prio) rec('Soporte prioritario', '15 % de la cuota recurrente', subtotal * 0.15);
+    else inc('Soporte estándar', 'Respuesta en 1 día laborable');
+
+    var onbM = 0; // el onboarding no se muestra en la calculadora
+    var base2 = L.reduce(function (s, l) { return s + (l.y1only ? 0 : (l.m || 0)); }, 0);
+    if (SUR) rec(mens ? 'Recargo por pago mensualizado' : 'Recargo por pago en 3 plazos', '+' + (SUR * 100) + ' % sobre la cuota' + (onbM ? ' (el primer año, también sobre el onboarding)' : ''), (base2 + onbM) * SUR);
+    var k = 1 + SUR;
+    mRec = base2 * k;                 // desde el segundo año
+    var firstM = (base2 + onbM) * k;  // primer año, con onboarding
+
+    // Pagos únicos
+    if (S.plan === 'firma') once('Alta y onboarding', 'Referencia; en Firma se negocia', 1500);
+    if (S.diarios) once('Diarios complejos', S.diarios + ' × 90 €', S.diarios * 90);
+    if (S.migra) once('Migración de expedientes', S.migra <= 5 ? 'Hasta 5 encargos: 450 €' : '450 € + ' + (S.migra - 5) + ' × 70 €', 450 + Math.max(0, S.migra - 5) * 70);
+    if (S.implant) once('Implantación presencial', S.implant + ' × 600 € por jornada', S.implant * 600);
+    if (S.bonos) once('Bonos de consultas NIA-ES', S.bonos + ' × 650 € (10 h)', S.bonos * 650);
+    if (S.sesiones) {
+      var free = Math.min(S.sesiones, p.sesIncl), paid = S.sesiones - free;
+      if (free) mOnce.push({ g: 'once', label: 'Formación in company online', detail: free + ' incluida' + (free > 1 ? 's' : '') + ' en ' + p.name, inc: true });
+      if (paid) once('Formación in company online', paid + ' × 500 €', paid * 500);
+    }
+    if (S.cursos) once('Cursos grabados', S.cursos + ' × 47,50 € (−50 % cliente)', S.cursos * 47.5);
+    if (S.incompany) once('Formación online técnica y homologada', S.incompany + ' diplomas × 180 €', S.incompany * 180);
+
+    var onceTotal = mOnce.reduce(function (s, l) { return s + (l.a || 0); }, 0);
+    return { rec: L, once: mOnce, monthly: mRec, year: mRec * 12, onceTotal: onceTotal, first: firstM * 12 + onceTotal, users: u,
+      firstMonth: firstM, onb: onbM };
+  }
+
+  function render() {
+    var p = PLANS[S.plan];
+    document.querySelectorAll('[data-plan]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.plan === S.plan)); });
+    document.querySelectorAll('[data-bill]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.bill === S.bill)); });
+    $('firma-warn').hidden = !(S.plan === 'firma' && S.users <= 15);
+    $('users-help').textContent = S.plan === 'firma' ? 'Todos a 30 €/mes (referencia)' : '2 incluidos en la cuota; ' + p.add + ' € del 3.º al 5.º, ' + p.add6 + ' € del 6.º al 9.º y ' + p.add10 + ' € desde el 10.º';
+    $('rev-help').textContent = p.revIncl ? 'Incluidos en Firma' : '5 €/mes cada uno · solo leen, revisan y firman';
+    if ($('ses-help')) $('ses-help').textContent = 'Para el equipo del despacho · 500 € · se ofrece con el software' + (p.sesIncl ? ' · ' + p.sesIncl + ' incluida' + (p.sesIncl > 1 ? 's' : '') : '');
+    document.querySelectorAll('[data-mod]').forEach(function (b) {
+      var k = b.dataset.mod, included = !!p.incl[k];
+      b.disabled = included;
+      b.setAttribute('aria-pressed', String(included || !!S.mods[k]));
+      var act = b.querySelector('.act');
+      if (act) act.textContent = included ? 'Incluido en ' + p.name : (S.mods[k] ? 'Añadido' : 'Añadir');
+    });
+    NUMS.forEach(function (k) { if (document.activeElement !== $(k)) $(k).value = S[k]; });
+    document.querySelectorAll('[data-tog]').forEach(function (b) {
+      var on = S[b.dataset.tog] > 0; b.setAttribute('aria-pressed', String(on)); b.querySelector('.act').textContent = on ? 'Añadido' : 'Añadir';
+    });
+    document.querySelectorAll('[data-add]').forEach(function (b) {
+      var k = b.dataset.add, on = S[k] > 0, st = document.querySelector('.stepper[data-for="' + k + '"]');
+      b.hidden = on; if (st) st.hidden = !on;
+      var row = b.closest('.mrow'); if (row) row.classList.toggle('on', on);
+    });
+    $('iva').checked = S.iva;
+
+    var r = compute(), f = (S.iva ? 1.21 : 1) * (S.red ? 1 - RED : 1), tag = (S.iva ? ' con IVA' : ' sin IVA') + (S.red ? ' · Precio Red −25 %' : '');
+    $('red').setAttribute('aria-pressed', String(!!S.red));
+    $('t-first').innerHTML = eur(r.first * f) + (S.red ? '<span class="oldp">' + eur(r.first * (S.iva ? 1.21 : 1)) + '</span>' : '');
+    var PAY = { contado: 'pago al contado', plazos: 'pago en 3 plazos', mensual: 'pago mensualizado' };
+    $('t-first-s').textContent = p.name + ', ' + r.users + ' usuario' + (r.users > 1 ? 's' : '') + ', ' + PAY[S.bill] + tag;
+    if (S.bill === 'mensual') {
+      $('t-month').textContent = eur(r.firstMonth * f);
+      $('t-month-s').textContent = 'Año 1, con el onboarding; desde el año 2, ' + eur(r.monthly * f) + '. Servicios aparte' + tag;
+    } else if (S.bill === 'plazos') {
+      $('t-month').textContent = eur(r.first / 3 * f);
+      $('t-month-s').textContent = 'Cada uno de los 3 plazos del año 1' + tag;
+    } else {
+      $('t-month').textContent = eur(r.firstMonth * f);
+      $('t-month-s').textContent = (r.onb ? 'Año 1, con el onboarding; desde el año 2, ' + eur(r.monthly * f) + '. ' : '') + 'Se cobra el año por adelantado' + tag;
+    }
+    $('t-month-k').textContent = S.bill === 'plazos' ? 'Plazo' : (S.bill === 'mensual' ? 'Pago mensual' : 'Cuota mensual');
+    $('t-once').textContent = eur(r.onceTotal * f);
+    $('t-year').textContent = eur(r.year * f);
+    $('t-user').textContent = eur(r.monthly / r.users * f);
+
+    var h = '<tr class="grp"><td colspan="3">Cuota, usuarios y módulos</td></tr>';
+    r.rec.forEach(function (l) {
+      h += l.inc
+        ? '<tr class="inc"><td>' + l.label + '<span class="d">' + l.detail + '</span></td><td class="n">Incluido</td><td class="n">Incluido</td></tr>'
+        : '<tr' + (l.y1only ? ' class="y1only"' : '') + '><td>' + l.label + '<span class="d">' + l.detail + '</span></td><td class="n">' + (l.unit ? eur(l.unit * f) + '<span class="d">por ' + l.per + '</span>' : eur(l.m * f)) + '</td><td class="n">' + eur(l.m * 12 * f) + '</td></tr>';
+    });
+    h += '<tr class="sum"><td>Cuota del primer año' + (r.onb ? '<span class="d">Con el onboarding</span>' : '') + '</td><td class="n">' + eur(r.firstMonth * f) + '</td><td class="n">' + eur(r.firstMonth * 12 * f) + '</td></tr>';
+    if (r.onb) h += '<tr class="sum2"><td>Cuota desde el segundo año<span class="d">Sin onboarding · recurrente</span></td><td class="n">' + eur(r.monthly * f) + '</td><td class="n">' + eur(r.year * f) + ' /año</td></tr>';
+    if (r.once.length) {
+      h += '<tr class="grp"><td colspan="3">Pagos únicos</td></tr>';
+      r.once.forEach(function (l) {
+        h += l.inc
+          ? '<tr class="inc"><td>' + l.label + '<span class="d">' + l.detail + '</span></td><td class="n">—</td><td class="n">Incluido</td></tr>'
+          : '<tr><td>' + l.label + '<span class="d">' + l.detail + '</span></td><td class="n">—</td><td class="n">' + eur(l.a * f) + '</td></tr>';
+      });
+      h += '<tr class="sum"><td>Subtotal pagos únicos</td><td class="n">—</td><td class="n">' + eur(r.onceTotal * f) + '</td></tr>';
+    }
+    if (S.iva) h += '<tr><td>Incluye IVA 21 %<span class="d">Sobre una base de ' + eur(r.first) + '</span></td><td class="n">—</td><td class="n">' + eur(r.first * 0.21) + '</td></tr>';
+    h += '<tr class="sum"><td>Total primer año</td><td class="n">—</td><td class="n">' + eur(r.first * f) + '</td></tr>';
+    $('lines').innerHTML = h;
+    var cl = r.users * 50 * 12;
+    $('clever-ref').textContent = 'Referencia CleverAudit: solo su nube gestionada cuesta unos 50 €/usuario/mes; con ' + r.users + ' usuario' + (r.users > 1 ? 's' : '') + ', ' + eur(cl * f) + ' al año sin contar su licencia. DokxIA, desde el segundo año: ' + eur(r.year * f) + ' con licencia, nube e IA incluidas.';
+    try { S.v = 1; localStorage.setItem('dokxia-demo', JSON.stringify(S)); } catch (e) {}
+  }
+
+  function asText() {
+    var r = compute(), f = S.iva ? 1.21 : 1, out = [];
+    out.push('Presupuesto DokxIA · ' + PLANS[S.plan].name + ' · ' + r.users + ' usuarios · ' + ({ contado: 'al contado', plazos: 'en 3 plazos', mensual: 'mensualizado' })[S.bill] + (S.iva ? ' · con IVA' : ' · sin IVA'));
+    out.push('');
+    r.rec.forEach(function (l) { out.push(l.label + ' (' + l.detail + '): ' + (l.inc ? 'incluido' : eur(l.m * f) + '/mes')); });
+    out.push('Cuota mensual el primer año (con onboarding): ' + eur(r.firstMonth * f) + ' · Desde el segundo año: ' + eur(r.monthly * f) + '/mes, ' + eur(r.year * f) + ' al año');
+    r.once.forEach(function (l) { out.push(l.label + ' (' + l.detail + '): ' + (l.inc ? 'incluido' : eur(l.a * f))); });
+    out.push('Pagos únicos: ' + eur(r.onceTotal * f));
+    out.push('Total primer año: ' + eur(r.first * f));
+    return out.join('\n');
+  }
+
+  var RED = 0.25;
+  // Destino de los envíos (configurar antes de la demo)
+  var CONFIG = { whatsapp: '34670382755', email: '' };
+  var FIELDS = { desp: 'f-desp', cont: 'f-cont', tel: 'f-tel', mail: 'f-mail', enc: 'f-enc' };
+  function readDesp() { var d = {}; Object.keys(FIELDS).forEach(function (k) { d[k] = ($(FIELDS[k]).value || '').trim(); }); return d; }
+  function fillDesp() { var d = S.desp || {}; Object.keys(FIELDS).forEach(function (k) { if (d[k] != null) $(FIELDS[k]).value = d[k]; }); }
+  function message() {
+    var r = compute(), d = readDesp(), k = S.red ? 1 - RED : 1, p = PLANS[S.plan];
+    var mods = Object.keys(MODS).filter(function (m) { return p.incl[m] || S.mods[m]; }).map(function (m) { return MODS[m].name + (p.incl[m] ? ' (incluido)' : ''); });
+    var svc = [];
+    if (S.diarios) svc.push(S.diarios + ' diarios complejos');
+    if (S.migra) svc.push(S.migra + ' encargos a migrar');
+    if (S.implant) svc.push(S.implant + ' jornadas de implantación');
+    if (S.sesiones) svc.push('Formación in company online');
+    if (S.incompany) svc.push(S.incompany + ' diplomas de formación homologada');
+    if (S.cursos) svc.push(S.cursos + ' cursos grabados');
+    var PAY = { contado: 'al contado', plazos: 'en 3 plazos', mensual: 'mensualizado' };
+    var out = [];
+    out.push('Presupuesto DokxIA · ' + (d.desp || 'Despacho sin nombre'));
+    if (d.cont) out.push('Contacto: ' + d.cont);
+    if (d.tel) out.push('Teléfono: ' + d.tel);
+    if (d.mail) out.push('Correo: ' + d.mail);
+    if (d.enc) out.push('Encargos al año: ' + d.enc);
+    out.push('');
+    out.push('Plan ' + p.name + ' · ' + r.users + ' usuarios · ' + S.reviewers + ' revisores · pago ' + PAY[S.bill]);
+    out.push('Módulos: ' + (mods.length ? mods.join(', ') : 'ninguno además del software'));
+    out.push('Servicios: ' + (svc.length ? svc.join(', ') : 'ninguno'));
+    out.push((S.red ? 'Precio Red (−25 %)' : 'Precio de tarifa') + ', sin IVA:');
+    out.push('· Total primer año: ' + eur(r.first * k));
+    out.push('· Cuota mensual: ' + eur(r.firstMonth * k));
+    out.push('· Recurrente anual: ' + eur(r.year * k));
+    var data = { v: 1, desp: d.desp, cont: d.cont, tel: d.tel, mail: d.mail, enc: d.enc, plan: S.plan, users: r.users, rev: S.reviewers, pago: S.bill, red: !!S.red,
+      mods: Object.keys(MODS).filter(function (m) { return S.mods[m] && !p.incl[m]; }), diarios: S.diarios, migra: S.migra, implant: S.implant, incomp: S.sesiones, diplomas: S.incompany, cursos: S.cursos,
+      total1: Math.round(r.first * k), anual: Math.round(r.year * k) };
+    out.push('');
+    out.push('#DOKX ' + JSON.stringify(data));
+    return out.join('\n');
+  }
+  function send(ch) {
+    var d = readDesp(), msg = $('send-msg');
+    if (!d.desp) { $('f-desp').closest('.fld').classList.add('err'); $('f-desp').focus(); msg.textContent = 'Escribe el nombre del despacho para poder enviar.'; return; }
+    var txt = message();
+    if (ch === 'wa') {
+      if (!CONFIG.whatsapp) { msg.textContent = 'El envío por WhatsApp aún no está configurado.'; return; }
+      window.open('https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(txt), '_blank');
+    } else {
+      if (!CONFIG.email) { msg.textContent = 'El envío por correo aún no está configurado.'; return; }
+      window.location.href = 'mailto:' + CONFIG.email + '?subject=' + encodeURIComponent('Presupuesto DokxIA · ' + d.desp) + '&body=' + encodeURIComponent(txt);
+    }
+    msg.textContent = 'Se ha abierto el mensaje. Pulsa enviar en tu WhatsApp o en tu correo. ¡Gracias!';
+  }
+  if (!CONFIG.email) $('send-mail').hidden = true;
+  if (!CONFIG.whatsapp) $('send-wa').hidden = true;
+  Object.keys(FIELDS).forEach(function (k) { $(FIELDS[k]).addEventListener('input', function () { S.desp = readDesp(); $(FIELDS[k]).closest('.fld').classList.remove('err'); try { localStorage.setItem('dokxia-demo', JSON.stringify(S)); } catch (e) {} }); });
+
+  function clamp(k, v) {
+    var el = $(k), min = +el.min, max = +el.max;
+    v = Math.round(+v); if (isNaN(v)) v = min;
+    return Math.max(min, Math.min(max, v));
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.plan) { S.plan = t.dataset.plan; if (S.plan === 'firma' && S.users <= 15) S.users = 16; }
+    else if (t.dataset.bill) S.bill = t.dataset.bill;
+    else if (t.dataset.mod && !t.disabled) S.mods[t.dataset.mod] = !S.mods[t.dataset.mod];
+    else if (t.dataset.add) S[t.dataset.add] = 1;
+    else if (t.dataset.tog) S[t.dataset.tog] = S[t.dataset.tog] ? 0 : 1;
+    else if (t.dataset.step) S[t.dataset.step] = clamp(t.dataset.step, S[t.dataset.step] + (+t.dataset.d));
+    else if (t.id === 'reset') { var keep = S.desp; S = JSON.parse(JSON.stringify(DEFAULT)); S.desp = keep; }
+    else if (t.id === 'red') S.red = !S.red;
+    else if (t.id === 'send-wa' || t.id === 'send-mail') { send(t.id === 'send-wa' ? 'wa' : 'mail'); return; }
+    else if (t.id === 'copy') {
+      var txt = asText();
+      var done = function () { $('copied').hidden = false; setTimeout(function () { $('copied').hidden = true; }, 2000); };
+      var fb = function () { var ta = $('fallback'); ta.value = txt; ta.hidden = false; ta.focus(); ta.select(); };
+      try { navigator.clipboard.writeText(txt).then(done, fb); } catch (err) { fb(); }
+      return;
+    } else return;
+    render();
+  });
+  NUMS.forEach(function (k) {
+    $(k).addEventListener('input', function () { if ($(k).value === '') return; S[k] = clamp(k, $(k).value); render(); });
+    $(k).addEventListener('change', function () { S[k] = clamp(k, $(k).value); $(k).value = S[k]; render(); });
+  });
+  $('iva').addEventListener('change', function () { S.iva = $('iva').checked; render(); });
+
+  try { var saved = JSON.parse(localStorage.getItem('dokxia-demo') || 'null'); if (saved && PLANS[saved.plan] && saved.v === 1) { S = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), saved); if (!/^(contado|plazos|mensual)$/.test(S.bill) || saved.v !== 1) S.bill = 'contado'; } } catch (e) {}
+  fillDesp();
+  render();
+})();
+</script>
+
+</body>
+</html>
